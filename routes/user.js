@@ -1,5 +1,7 @@
 var router = require('express').Router();
 var User = require('../models/user');
+var Cart = require('../models/cart');
+var async = require('async');
 var passport = require('passport');
 var passportConf = require('../config/passport');
 
@@ -28,29 +30,42 @@ router.get('/signup', function(req, res){
 });
 
 router.post('/signup', function(req, res){
-	var user = new User();
+	
+	async.waterfall([
+		function(callback){
+			var user = new User();
 
-	user.username = req.body.username;
-	user.email = req.body.email;
-	user.password = req.body.password;
-	user.picture = user.avatar();
-	user.address = req.body.address;
+			user.username = req.body.username;
+			user.email = req.body.email;
+			user.password = req.body.password;
+			user.picture = user.avatar();
+			user.address = req.body.address;
 
-	User.findOne({email: req.body.email}, function(err, existingUser){
-		if(existingUser){
-			req.flash('errors', 'Account with this email Id already exists!!');
-			return res.redirect('/signup');
-		}else{
-			user.save(function(err, user){
+			User.findOne({email: req.body.email}, function(err, existingUser){
+				if(existingUser){
+					req.flash('errors', 'Account with this email Id already exists!!');
+					return res.redirect('/signup');
+				}else{
+					user.save(function(err, user){
+						if(err) return next(err);
+						callback(null, user);
+					});
+				}
+			});
+		},
+
+		function(user){
+			var cart = new Cart();  
+			cart.owner = user._id;
+			cart.save(function(err){
 				if(err) return next(err);
-
 				req.logIn(user, function(err){
 					if(err) return next(err);
 					res.redirect('/profile');
-				})
+				});
 			});
 		}
-	});
+	]); 	
 });
 
 router.get('/logout', function(req, res, next){
@@ -75,9 +90,9 @@ router.post('/edit-profile', function(req, res, next){
 		} 
 
 		user.save(function(err){})
-			if(err) return next(err);
-			req.flash('success', 'Successfully Edited!!');
-			return res.redirect('/edit-profile');
+		if(err) return next(err);
+		req.flash('success', 'Successfully Edited!!');
+		return res.redirect('/edit-profile');
 	});
 });
 

@@ -7,11 +7,14 @@ var ejsMate = require('ejs-mate');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var flash = require('express-flash');
-var MongoStore = require('connect-mongo')(session);  
+var MongoStore = require('connect-mongo')(session);   
 var passport= require('passport'); 
 
 var secret = require('./config/secret');
 var User = require('./models/user');
+var Category = require('./models/category');
+
+var cartLength = require('./middlewares/middleware');	
 
 var app = express();
 
@@ -43,14 +46,27 @@ app.use(function(req, res, next){ //making user accesible to every route so that
 	next();
 }); 
 
+app.use(cartLength);
+app.use(function(req, res, next){
+	Category.find({}, function(err, categories){
+		if(err) return next(err);
+		res.locals.categories = categories;
+		next();
+	});
+});
+
 app.engine('ejs',ejsMate);
 app.set('view engine', 'ejs');  
 
 var mainRoutes = require('./routes/main');
 var userRoutes = require('./routes/user');
+var adminRoutes = require('./routes/admin');
+var apiRoutes = require('./api/api');
 
 app.use(mainRoutes);
 app.use(userRoutes);
+app.use(adminRoutes);	
+app.use('/api', apiRoutes);
 
 app.listen(secret.port, function(err){
 	if(err) throw err; 

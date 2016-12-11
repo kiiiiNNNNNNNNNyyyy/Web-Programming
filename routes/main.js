@@ -56,17 +56,26 @@ router.get('/cart', function(req, res, next){
 	});
 });
 
+router.post('/charge',function(req,res){
+	var token = req.body.stripeToken;
+	var charge=req.body.chargeAmount;
+	var charge=stripe.charges.create({
+		//amount:chargeAmount,
+		currency:"usd",
+		source:token
+	},function(err,charge){
+		if(err & err.type === "stripeCardError"){
+			console.log("card declined");
+		}
+
+	})
+	console.log("payment sucess")
+	//res.redirect
+});
+
 router.post('/remove', function(req, res, next){
 	Cart.findOne({ owner: req.user._id}, function(err, foundCart){
-		console.log(JSON.stringify(req.body.item_id));
-		var arr = foundCart.items;
-		for(var i=0; i<arr.length;i++){
-			var obj = arr[i];
-			if(JSON.stringify(obj.item_id) === JSON.stringify(req.body.item_id)){
-				
-			}
-		}
-		foundCart.items.pull(JSON.stringify(req.body.item_id));
+		foundCart.items.pull(String(req.body.item));
 		foundCart.total = (foundCart.total - parseFloat(req.body.price)).toFixed(2);
 		foundCart.save(function(err, found){
 			req.flash('remove', 'Successfully Removed!');
@@ -79,11 +88,11 @@ router.post('/product/:product_id', function(req, res, next){
 	Cart.findOne({ owner: req.user._id }, function(err, cart){
 		cart.items.push({
 			item: req.body.product_id,
-			item_id: req.body.product_id,
+			//item_id: req.body.product_id,
 			price: parseFloat(req.body.priceValue),
 			quantity: parseInt(req.body.quantity),
-			name: req.body.nameHidden,
-			image: req.body.imageHidden
+			//name: req.body.nameHidden,
+			//image: req.body.imageHidden
 		});
 		cart.total = (cart.total + parseFloat(req.body.priceValue)).toFixed(2);
 		cart.save(function(err){
